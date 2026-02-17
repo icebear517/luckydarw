@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>好雨知時節｜幸運抽獎轉盤</title>
+    <title>消費加Line轉幸運轉盤</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
     <style>
         body {
@@ -18,26 +18,52 @@
             color: #333;
             overflow: hidden; /* 防止iPad滑動白邊 */
             touch-action: manipulation; /* 停用點擊放大 */
+            padding: 20px 0; /* 上下留點白邊 */
+            box-sizing: border-box;
         }
         h1 {
             color: #d12e5c;
             margin: 0 0 5px 0;
-            font-size: 5vmin;
+            font-size: 4vmin; /* 稍微調小一點標題，讓空間給QR Code */
         }
         p.subtitle {
-            margin: 0 0 20px 0;
+            margin: 0 0 15px 0;
             color: #666;
+            font-size: 2vmin;
+        }
+
+        /* 新增：QR Code 區塊樣式 */
+        .qr-section {
+            text-align: center;
+            margin-bottom: 2vmin;
+            background: #fff;
+            padding: 1.5vmin 3vmin;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .qr-section p {
+            margin: 0 0 1vmin 0;
+            color: #d12e5c;
+            font-weight: bold;
             font-size: 2.5vmin;
         }
+        .qr-section img {
+            width: 18vmin; /* 使用相對單位設定大小 */
+            height: 18vmin;
+            display: block;
+        }
         
-        /* 轉盤容器最大化，佔據大部分可用空間 */
+        /* 轉盤容器 */
         .container {
             position: relative;
-            width: 75vmin;  
-            height: 75vmin;
-            max-width: 600px;
-            max-height: 600px;
-            margin-bottom: 30px;
+            width: 65vmin; /* 稍微縮小轉盤，以容納 QR Code */
+            height: 65vmin;
+            max-width: 550px;
+            max-height: 550px;
+            margin-bottom: 3vmin;
         }
         canvas#wheel {
             width: 100%;
@@ -47,7 +73,7 @@
             transition: transform 4s cubic-bezier(0.1, 0.7, 0.1, 1);
         }
         
-        /* 轉盤指針放大 */
+        /* 轉盤指針 */
         .pointer {
             position: absolute;
             top: -25px;
@@ -70,18 +96,19 @@
             border-top: 45px solid #ff3b30;
         }
         
-        /* 抽獎按鈕放大，方便觸控 */
+        /* 抽獎按鈕 */
         button#spinBtn {
             background-color: #d12e5c;
             color: white;
             border: none;
-            padding: 3vmin 10vmin;
-            font-size: 4vmin;
+            padding: 2.5vmin 8vmin;
+            font-size: 3.5vmin;
             font-weight: bold;
             border-radius: 50px;
             cursor: pointer;
             box-shadow: 0 6px 15px rgba(209,46,92,0.3);
             transition: transform 0.1s, background-color 0.3s;
+            margin-bottom: 20px; /* 底部留空 */
         }
         button#spinBtn:active {
             transform: scale(0.95);
@@ -92,15 +119,16 @@
             cursor: not-allowed;
         }
 
-        /* 隱藏的維護按鈕 */
+        /* 隱藏的維護按鈕 (右下角淡色齒輪) */
         #settingsBtn {
             position: fixed;
             bottom: 20px;
             right: 20px;
             font-size: 30px;
-            opacity: 0.1; /* 非常淡，客人不會注意 */
+            opacity: 0.1;
             cursor: pointer;
             z-index: 100;
+            padding: 10px; /* 增加點擊範圍 */
         }
 
         /* 維護模式彈出視窗 */
@@ -216,8 +244,13 @@
 </head>
 <body>
 
-    <h1>好雨知時節｜幸運轉盤</h1>
+    <h1>消費加Line轉幸運轉盤</h1>
     <p class="subtitle">試試手氣，帶走您的專屬優惠與好禮！</p>
+
+    <div class="qr-section">
+        <p>👇 先掃描加入好友，再抽獎喔！👇</p>
+        <img src="https://chart.googleapis.com/chart?cht=qr&chl=https%3A%2F%2Fpage.line.me%2Ftlf0508f%3FopenQrModal%3Dtrue&chs=200x200&chld=L|1" alt="Line QR Code">
+    </div>
 
     <div class="container">
         <div class="pointer"></div>
@@ -237,6 +270,7 @@
             
             <div class="admin-section">
                 <h3>1. 獎項剩餘數量設定</h3>
+                <button onclick="resetToDefault()" style="margin-bottom: 10px; background:#ccc; border:none; padding:5px 10px; border-radius:5px; cursor:pointer;">⚠️ 重置為預設數量</button>
                 <div id="admin-prizes-list"></div>
                 <button class="save-btn" onclick="savePrizes()">儲存數量並更新轉盤</button>
             </div>
@@ -250,9 +284,9 @@
     </div>
 
     <script>
-        // 預設獎項資料
+        // 預設獎項資料 (已更新為雲朵紅直傘)
         const defaultPrizes = [
-            { id: "p1", name: "雙層配色直傘", count: 1, color: "#FF3B30" },
+            { id: "p1", name: "雲朵紅直傘", count: 1, color: "#FF3B30" },
             { id: "p2", name: "現折500元", count: 1, color: "#FF9500" },
             { id: "p3", name: "現折200元", count: 2, color: "#FFCC00" },
             { id: "p4", name: "現折100元", count: 3, color: "#4CD964" },
@@ -264,10 +298,25 @@
         let prizes = JSON.parse(localStorage.getItem('rainbow_wheel_prizes')) || defaultPrizes;
         let history = JSON.parse(localStorage.getItem('rainbow_wheel_history')) || [];
 
+        // --- 自動資料遷移 (重要：處理舊緩存的名稱) ---
+        let dataUpdated = false;
+        prizes.forEach(p => {
+            // 如果發現舊的名字「雙層配色直傘」，就自動改成「雲朵紅直傘」
+            if (p.id === 'p1' && p.name === '雙層配色直傘') {
+                p.name = '雲朵紅直傘';
+                dataUpdated = true;
+            }
+        });
+        if (dataUpdated) {
+            // 如果有更新名稱，立即存回 LocalStorage，下次就不會再執行
+            localStorage.setItem('rainbow_wheel_prizes', JSON.stringify(prizes));
+        }
+        // -------------------------------------------
+
         let currentRotation = 0;
         let isSpinning = false;
         
-        // --- 音效設定 ---
+        // --- 音效設定 (維持歡樂版) ---
         let audioCtx;
         function initAudio() {
             if (!audioCtx) {
@@ -276,7 +325,6 @@
             if (audioCtx.state === 'suspended') audioCtx.resume();
         }
 
-        // 轉動時的滴答聲
         function playTick() {
             if (!audioCtx) return;
             const osc = audioCtx.createOscillator();
@@ -291,36 +339,26 @@
             osc.stop(audioCtx.currentTime + 0.05);
         }
 
-        // 升級版：歡樂中獎音效 (復古電玩過關風)
         function playWinSound() {
             if (!audioCtx) return;
-            
-            // 旋律音符：Do, Mi, Sol, 高Do, 降回Sol, 結尾長音高Do
             const melody = [
-                { note: 523.25, time: 0, duration: 0.1 },     // C5
-                { note: 659.25, time: 0.1, duration: 0.1 },   // E5
-                { note: 783.99, time: 0.2, duration: 0.1 },   // G5
-                { note: 1046.50, time: 0.3, duration: 0.3 },  // C6
-                { note: 783.99, time: 0.65, duration: 0.12 }, // G5
-                { note: 1046.50, time: 0.8, duration: 0.8 }   // C6 (Tada!)
+                { note: 523.25, time: 0, duration: 0.1 },
+                { note: 659.25, time: 0.1, duration: 0.1 },
+                { note: 783.99, time: 0.2, duration: 0.1 },
+                { note: 1046.50, time: 0.3, duration: 0.3 },
+                { note: 783.99, time: 0.65, duration: 0.12 },
+                { note: 1046.50, time: 0.8, duration: 0.8 }
             ];
-
             melody.forEach(m => {
                 const osc = audioCtx.createOscillator();
                 const gainNode = audioCtx.createGain();
-                
                 osc.connect(gainNode);
                 gainNode.connect(audioCtx.destination);
-                
-                // 改用 'square' (方波) 會產生類似紅白機遊戲那種充滿活力的聲音
                 osc.type = "square";
                 osc.frequency.value = m.note;
-                
-                // 音量控制，讓每個音符聽起來輕快有彈性
                 gainNode.gain.setValueAtTime(0, audioCtx.currentTime + m.time);
                 gainNode.gain.linearRampToValueAtTime(0.08, audioCtx.currentTime + m.time + 0.02);
                 gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + m.time + m.duration);
-                
                 osc.start(audioCtx.currentTime + m.time);
                 osc.stop(audioCtx.currentTime + m.time + m.duration);
             });
@@ -422,7 +460,6 @@
                 saveData();
                 recordHistory(prizes[winningIndex].name);
 
-                // 觸發歡樂音效與撒花
                 playWinSound();
                 confetti({
                     particleCount: 150,
@@ -464,6 +501,7 @@
             prizes.forEach((prize, index) => {
                 const row = document.createElement('div');
                 row.className = 'prize-edit-row';
+                // 這裡顯示的名稱會是更新後的「雲朵紅直傘」
                 row.innerHTML = `
                     <span style="color:${prize.color}; font-weight:bold;">${prize.name}</span>
                     <div>
@@ -505,6 +543,18 @@
             drawWheel();
             closeAdmin();
             alert("✅ 數量已更新儲存！");
+        }
+        
+        // 新增：重置功能
+        function resetToDefault() {
+            if(confirm("確定要將所有獎項數量重置為最初的預設值嗎？(這不會清除抽獎紀錄)")) {
+                // 深拷貝預設值，避免修改到原始參考
+                prizes = JSON.parse(JSON.stringify(defaultPrizes));
+                saveData();
+                drawWheel();
+                openAdmin(); // 重新整理後台顯示
+                alert("已重置為預設數量。");
+            }
         }
 
         // 初始化
