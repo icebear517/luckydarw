@@ -3,66 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>消費加Line轉幸運轉盤</title>
+    <title>消費加Line轉幸運轉盤(橫式)</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
     <style>
         body {
             font-family: 'Helvetica Neue', Arial, 'LiHei Pro', sans-serif;
             background-color: #f4f4f9;
+            /* 身體改為彈性容器，讓主內容置中 */
             display: flex;
-            flex-direction: column;
-            align-items: center;
             justify-content: center;
+            align-items: center;
             min-height: 100vh;
             margin: 0;
             color: #333;
             overflow: hidden; /* 防止iPad滑動白邊 */
             touch-action: manipulation; /* 停用點擊放大 */
-            padding: 20px 0; /* 上下留點白邊 */
             box-sizing: border-box;
         }
+
+        /* 新增：橫式主容器，包住左右兩邊 */
+        .landscape-container {
+            display: flex;
+            flex-direction: row; /* 左右排列 */
+            align-items: center; /* 垂直置中對齊 */
+            justify-content: center;
+            gap: 5vw; /* 左右區塊間距 */
+            width: 95vw;
+            height: 95vh;
+        }
+
+        /* 左側面板：標題+轉盤+按鈕 */
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1.5; /* 左側佔比稍微大一點 */
+        }
+
+        /* 右側面板：QR Code */
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1; /* 右側佔比 */
+        }
+
         h1 {
             color: #d12e5c;
             margin: 0 0 5px 0;
-            font-size: 4vmin; /* 稍微調小一點標題，讓空間給QR Code */
+            font-size: 4vmin; /* 調整字體大小以適應橫屏 */
+            text-align: center;
         }
         p.subtitle {
             margin: 0 0 15px 0;
             color: #666;
             font-size: 2vmin;
+            text-align: center;
         }
 
-        /* 新增：QR Code 區塊樣式 */
+        /* QR Code 區塊樣式優化 */
         .qr-section {
             text-align: center;
-            margin-bottom: 2vmin;
             background: #fff;
-            padding: 1.5vmin 3vmin;
-            border-radius: 15px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            padding: 3vmin 4vmin; /* 加大內距 */
+            border-radius: 20px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
             display: flex;
             flex-direction: column;
             align-items: center;
         }
         .qr-section p {
-            margin: 0 0 1vmin 0;
+            margin: 0 0 2vmin 0;
             color: #d12e5c;
             font-weight: bold;
-            font-size: 2.5vmin;
+            font-size: 3vmin; /* 加大提示文字 */
+            line-height: 1.4;
         }
         .qr-section img {
-            width: 18vmin; /* 使用相對單位設定大小 */
-            height: 18vmin;
+            width: 30vmin; /* 大幅增加 QR Code 大小 */
+            height: 30vmin;
             display: block;
         }
         
         /* 轉盤容器 */
         .container {
             position: relative;
-            width: 65vmin; /* 稍微縮小轉盤，以容納 QR Code */
-            height: 65vmin;
-            max-width: 550px;
-            max-height: 550px;
+            /* 橫式時，高度是限制，設定為螢幕高度的 70% */
+            width: 70vmin; 
+            height: 70vmin;
+            max-width: 650px;
+            max-height: 650px;
             margin-bottom: 3vmin;
         }
         canvas#wheel {
@@ -101,14 +133,13 @@
             background-color: #d12e5c;
             color: white;
             border: none;
-            padding: 2.5vmin 8vmin;
+            padding: 2vmin 7vmin;
             font-size: 3.5vmin;
             font-weight: bold;
             border-radius: 50px;
             cursor: pointer;
             box-shadow: 0 6px 15px rgba(209,46,92,0.3);
             transition: transform 0.1s, background-color 0.3s;
-            margin-bottom: 20px; /* 底部留空 */
         }
         button#spinBtn:active {
             transform: scale(0.95);
@@ -122,16 +153,16 @@
         /* 隱藏的維護按鈕 (右下角淡色齒輪) */
         #settingsBtn {
             position: fixed;
-            bottom: 20px;
-            right: 20px;
+            bottom: 15px;
+            right: 15px;
             font-size: 30px;
-            opacity: 0.1;
+            opacity: 0.15;
             cursor: pointer;
             z-index: 100;
-            padding: 10px; /* 增加點擊範圍 */
+            padding: 10px;
         }
 
-        /* 維護模式彈出視窗 */
+        /* 維護模式彈出視窗 (維持不變) */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -143,8 +174,8 @@
         }
         .modal-content {
             background: #fff;
-            width: 90%;
-            max-width: 600px;
+            width: 80%; /* 橫式時稍微窄一點 */
+            max-width: 500px;
             max-height: 90vh;
             border-radius: 15px;
             padding: 20px;
@@ -181,8 +212,6 @@
             color: #d12e5c;
             font-size: 18px;
         }
-        
-        /* 數量設定區 */
         .prize-edit-row {
             display: flex;
             justify-content: space-between;
@@ -213,13 +242,11 @@
             margin-top: 10px;
             cursor: pointer;
         }
-
-        /* 紀錄清單 */
         .history-list {
             list-style: none;
             padding: 0;
             margin: 0;
-            max-height: 200px;
+            max-height: 150px; /* 橫式時高度限制稍微小一點 */
             overflow-y: auto;
             background: #f9f9f9;
             border: 1px solid #eee;
@@ -244,20 +271,28 @@
 </head>
 <body>
 
-    <h1>消費加Line轉幸運轉盤</h1>
-    <p class="subtitle">試試手氣，帶走您的專屬優惠與好禮！</p>
+    <div class="landscape-container">
+        
+        <div class="left-panel">
+            <h1>消費加Line轉幸運轉盤</h1>
+            <p class="subtitle">試試手氣，帶走您的專屬優惠與好禮！</p>
 
-    <div class="qr-section">
-        <p>👇 先掃描加入好友，再抽獎喔！👇</p>
-        <img src="https://chart.googleapis.com/chart?cht=qr&chl=https%3A%2F%2Fpage.line.me%2Ftlf0508f%3FopenQrModal%3Dtrue&chs=200x200&chld=L|1" alt="Line QR Code">
+            <div class="container">
+                <div class="pointer"></div>
+                <canvas id="wheel" width="800" height="800"></canvas>
+            </div>
+
+            <button id="spinBtn" onclick="spin()">開始抽獎</button>
+        </div>
+
+        <div class="right-panel">
+            <div class="qr-section">
+                <p>👇 掃描加入好友<br>即可參加抽獎！👇</p>
+                <img src="https://chart.googleapis.com/chart?cht=qr&chl=https%3A%2F%2Fpage.line.me%2Ftlf0508f%3FopenQrModal%3Dtrue&chs=300x300&chld=L|1" alt="Line QR Code">
+            </div>
+        </div>
+
     </div>
-
-    <div class="container">
-        <div class="pointer"></div>
-        <canvas id="wheel" width="800" height="800"></canvas>
-    </div>
-
-    <button id="spinBtn" onclick="spin()">開始抽獎</button>
     
     <div id="settingsBtn" onclick="openAdmin()">⚙️</div>
 
@@ -278,13 +313,13 @@
             <div class="admin-section">
                 <h3>2. 今日抽中清單 (<span id="today-date"></span>)</h3>
                 <ul class="history-list" id="history-list">
-                    </ul>
+                </ul>
             </div>
         </div>
     </div>
 
     <script>
-        // 預設獎項資料 (已更新為雲朵紅直傘)
+        // 預設獎項資料
         const defaultPrizes = [
             { id: "p1", name: "雲朵紅直傘", count: 1, color: "#FF3B30" },
             { id: "p2", name: "現折500元", count: 1, color: "#FF9500" },
@@ -298,25 +333,23 @@
         let prizes = JSON.parse(localStorage.getItem('rainbow_wheel_prizes')) || defaultPrizes;
         let history = JSON.parse(localStorage.getItem('rainbow_wheel_history')) || [];
 
-        // --- 自動資料遷移 (重要：處理舊緩存的名稱) ---
+        // --- 自動資料遷移 ---
         let dataUpdated = false;
         prizes.forEach(p => {
-            // 如果發現舊的名字「雙層配色直傘」，就自動改成「雲朵紅直傘」
             if (p.id === 'p1' && p.name === '雙層配色直傘') {
                 p.name = '雲朵紅直傘';
                 dataUpdated = true;
             }
         });
         if (dataUpdated) {
-            // 如果有更新名稱，立即存回 LocalStorage，下次就不會再執行
             localStorage.setItem('rainbow_wheel_prizes', JSON.stringify(prizes));
         }
-        // -------------------------------------------
+        // -------------------
 
         let currentRotation = 0;
         let isSpinning = false;
         
-        // --- 音效設定 (維持歡樂版) ---
+        // --- 音效設定 ---
         let audioCtx;
         function initAudio() {
             if (!audioCtx) {
@@ -391,7 +424,8 @@
                 ctx.rotate(i * sliceAngle + sliceAngle / 2);
                 ctx.textAlign = "right";
                 ctx.fillStyle = "#fff";
-                ctx.font = "bold 44px 'Helvetica Neue', sans-serif";
+                // 調整橫式時的字體大小
+                ctx.font = "bold 40px 'Helvetica Neue', sans-serif";
                 
                 let displayText = prizes[i].name;
                 if(prizes[i].count <= 0) {
@@ -463,8 +497,8 @@
                 playWinSound();
                 confetti({
                     particleCount: 150,
-                    spread: 80,
-                    origin: { y: 0.6 },
+                    spread: 100, // 橫式撒花範圍大一點
+                    origin: { y: 0.6, x: 0.4 }, // 調整撒花起點在轉盤附近
                     colors: ['#FF3B30', '#FFCC00', '#4CD964', '#007AFF']
                 });
 
@@ -501,7 +535,6 @@
             prizes.forEach((prize, index) => {
                 const row = document.createElement('div');
                 row.className = 'prize-edit-row';
-                // 這裡顯示的名稱會是更新後的「雲朵紅直傘」
                 row.innerHTML = `
                     <span style="color:${prize.color}; font-weight:bold;">${prize.name}</span>
                     <div>
@@ -545,14 +578,12 @@
             alert("✅ 數量已更新儲存！");
         }
         
-        // 新增：重置功能
         function resetToDefault() {
             if(confirm("確定要將所有獎項數量重置為最初的預設值嗎？(這不會清除抽獎紀錄)")) {
-                // 深拷貝預設值，避免修改到原始參考
                 prizes = JSON.parse(JSON.stringify(defaultPrizes));
                 saveData();
                 drawWheel();
-                openAdmin(); // 重新整理後台顯示
+                openAdmin(); 
                 alert("已重置為預設數量。");
             }
         }
