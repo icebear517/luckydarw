@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>消費加Line轉幸運轉盤(橫式)</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, 'LiHei Pro', sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            color: #333;
+            overflow: hidden; 
+            touch-action: manipulation; 
+            box-sizing: border-box;
+        }
+
+        .landscape-container {
+            display: flex;
+            flex-direction: row; 
+            align-items: center; 
+            justify-content: center;
+            gap: 5vw; 
+            width: 95vw;
+            height: 95vh;
+        }
+
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1.5; 
+        }
+
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1; 
+        }
+
+        h1 {
+            color: #d12e5c;
+            margin: 0 0 5px 0;
+            font-size: 4vmin; 
+            text-align: center;
+        }
+        p.subtitle {
+            margin: 0 0 15px 0;
+            color: #666;
+            font-size: 2vmin;
+            text-align: center;
+        }
+
+        .qr-section {
+            text-align: center;
+            background: #fff;
+            padding: 3vmin 4vmin; 
+            border-radius: 20px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .qr-section p {
+            margin: 0 0 2vmin 0;
+            color: #d12e5c;
+            font-weight: bold;
+            font-size: 3vmin; 
+            line-height: 1.4;
+        }
+        .qr-section img {
+            width: 30vmin; 
+            height: 30vmin;
+            display: block;
+        }
+        
+        .container {
+            position: relative;
+            width: 70vmin; 
+            height: 70vmin;
+            max-width: 650px;
+            max-height: 650px;
+            margin-bottom: 3vmin;
+        }
+        canvas#wheel {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            transition: transform 4s cubic-bezier(0.1, 0.7, 0.1, 1);
+        }
+        
+        .pointer {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 25px solid transparent;
+            border-right: 25px solid transparent;
+            border-top: 55px solid #333; 
+            z-index: 10;
+        }
+        .pointer::after {
+            content: '';
+            position: absolute;
+            top: -55px;
+            left: -18px;
+            border-left: 18px solid transparent;
+            border-right: 18px solid transparent;
+            border-top: 45px solid #ff3b30;
+        }
+        
+        button#spinBtn {
+            background-color: #d12e5c;
+            color: white;
+            border: none;
+            padding: 2vmin 7vmin;
+            font-size: 3.5vmin;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 6px 15px rgba(209,46,92,0.3);
+            transition: transform 0.1s, background-color 0.3s;
+        }
+        button#spinBtn:active {
+            transform: scale(0.95);
+        }
+        button#spinBtn:disabled {
+            background-color: #ccc;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        #settingsBtn {
+            position: fixed;
+            bottom: 15px;
+            right: 15px;
+            font-size: 30px;
+            opacity: 0.15;
+            cursor: pointer;
+            z-index: 100;
+            padding: 10px;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: #fff;
+            width: 85%; 
+            max-width: 550px;
+            max-height: 90vh;
+            border-radius: 15px;
+            padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        .modal-header h2 {
+            margin: 0;
+            color: #333;
+        }
+        .close-btn {
+            background: #eee;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .admin-section {
+            margin-bottom: 20px;
+        }
+        .admin-section h3 {
+            margin: 0 0 10px 0;
+            color: #d12e5c;
+            font-size: 18px;
+        }
+        .prize-edit-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px dashed #ccc;
+        }
+        .prize-edit-row span {
+            font-size: 16px;
+        }
+        .prize-edit-row input {
+            width: 80px;
+            padding: 5px;
+            font-size: 16px;
+            text-align: center;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .save-btn {
+            background: #4CD964;
+            color: white;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 8px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        .history-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 250px; /* 拉高顯示範圍，方便看好幾天的紀錄 */
+            overflow-y: auto;
+            background: #f9f9f9;
+            border: 1px solid #eee;
+            border-radius: 5px;
+        }
+        .history-list li {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            font-size: 15px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .history-list li.date-header {
+            background-color: #e2e2e2;
+            font-weight: bold;
+            justify-content: center;
+            color: #555;
+            font-size: 14px;
+            padding: 6px;
+        }
+        .history-list li:last-child {
+            border-bottom: none;
+        }
+        .empty-history {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="landscape-container">
+        
+        <div class="left-panel">
+            <h1>消費加Line轉幸運轉盤</h1>
+            <p class="subtitle">試試手氣，帶走您的專屬優惠與好禮！</p>
+
+            <div class="container">
+                <div class="pointer"></div>
+                <canvas id="wheel" width="800" height="800"></canvas>
+            </div>
+
+            <button id="spinBtn" onclick="spin()">開始抽獎</button>
+        </div>
+
+        <div class="right-panel">
+            <div class="qr-section">
+                <p>👇 掃描加入好友<br>即可參加抽獎！👇</p>
+                <img src="https://chart.googleapis.com/chart?cht=qr&chl=https%3A%2F%2Fpage.line.me%2Ftlf0508f%3FopenQrModal%3Dtrue&chs=300x300&chld=L|1" alt="Line QR Code">
+            </div>
+        </div>
+
+    </div>
+    
+    <div id="settingsBtn" onclick="openAdmin()">⚙️</div>
+
+    <div class="modal-overlay" id="adminModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>後台維護模式</h2>
+                <button class="close-btn" onclick="closeAdmin()">關閉</button>
+            </div>
+            
+            <div class="admin-section">
+                <h3>1. 獎項剩餘數量設定</h3>
+                <button onclick="resetToDefault()" style="margin-bottom: 10px; background:#ccc; border:none; padding:5px 10px; border-radius:5px; cursor:pointer;">⚠️ 重置為預設數量</button>
+                <div id="admin-prizes-list"></div>
+                <button class="save-btn" onclick="savePrizes()">儲存數量並更新轉盤</button>
+            </div>
+
+            <div class="admin-section">
+                <h3>2. 歷史抽中紀錄</h3>
+                <ul class="history-list" id="history-list">
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const defaultPrizes = [
+            { id: "p1", name: "雲朵紅直傘", count: 1, color: "#FF3B30" },
+            { id: "p2", name: "現折500元", count: 1, color: "#FF9500" },
+            { id: "p3", name: "現折200元", count: 2, color: "#FFCC00" },
+            { id: "p4", name: "現折100元", count: 3, color: "#4CD964" },
+            { id: "p5", name: "現折77元", count: 20, color: "#5AC8FA" },
+            { id: "p6", name: "現折50元", count: 40, color: "#007AFF" },
+            { id: "p7", name: "祈福小傘", count: 20, color: "#5856D6" }
+        ];
+
+        let prizes = JSON.parse(localStorage.getItem('rainbow_wheel_prizes')) || defaultPrizes;
+        let history = JSON.parse(localStorage.getItem('rainbow_wheel_history')) || [];
+
+        let dataUpdated = false;
+        prizes.forEach(p => {
+            if (p.id === 'p1' && p.name === '雙層配色直傘') {
+                p.name = '雲朵紅直傘';
+                dataUpdated = true;
+            }
+        });
+        if (dataUpdated) {
+            localStorage.setItem('rainbow_wheel_prizes', JSON.stringify(prizes));
+        }
+
+        let currentRotation = 0;
+        let isSpinning = false;
+        
+        let audioCtx;
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playTick() {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            osc.frequency.value = 800;
+            osc.type = "sine";
+            gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.05);
+        }
+
+        function playWinSound() {
+            if (!audioCtx) return;
+            const melody = [
+                { note: 523.25, time: 0, duration: 0.1 },
+                { note: 659.25, time: 0.1, duration: 0.1 },
+                { note: 783.99, time: 0.2, duration: 0.1 },
+                { note: 1046.50, time: 0.3, duration: 0.3 },
+                { note: 783.99, time: 0.65, duration: 0.12 },
+                { note: 1046.50, time: 0.8, duration: 0.8 }
+            ];
+            melody.forEach(m => {
+                const osc = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                osc.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                osc.type = "square";
+                osc.frequency.value = m.note;
+                gainNode.gain.setValueAtTime(0, audioCtx.currentTime + m.time);
+                gainNode.gain.linearRampToValueAtTime(0.08, audioCtx.currentTime + m.time + 0.02);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + m.time + m.duration);
+                osc.start(audioCtx.currentTime + m.time);
+                osc.stop(audioCtx.currentTime + m.time + m.duration);
+            });
+        }
+
+        function drawWheel() {
+            const canvas = document.getElementById('wheel');
+            const ctx = canvas.getContext('2d');
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = canvas.width / 2;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const sliceAngle = (2 * Math.PI) / prizes.length;
+
+            for (let i = 0; i < prizes.length; i++) {
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, i * sliceAngle, (i + 1) * sliceAngle);
+                ctx.fillStyle = prizes[i].color;
+                ctx.fill();
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = "#fff";
+                ctx.stroke();
+
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(i * sliceAngle + sliceAngle / 2);
+                ctx.textAlign = "right";
+                ctx.fillStyle = "#fff";
+                ctx.font = "bold 40px 'Helvetica Neue', sans-serif";
+                
+                let displayText = prizes[i].name;
+                if(prizes[i].count <= 0) {
+                    ctx.fillStyle = "rgba(255,255,255,0.4)"; 
+                }
+                
+                ctx.fillText(displayText, radius - 40, 15);
+                ctx.restore();
+            }
+
+            checkButtonStatus();
+        }
+
+        function checkButtonStatus() {
+            const totalWeight = prizes.reduce((sum, prize) => sum + parseInt(prize.count), 0);
+            const btn = document.getElementById('spinBtn');
+            if (totalWeight === 0) {
+                btn.disabled = true;
+                btn.innerText = '獎項已全數抽完';
+            } else {
+                btn.disabled = false;
+                btn.innerText = '開始抽獎';
+            }
+        }
+
+        function spin() {
+            if (isSpinning) return;
+            initAudio();
+
+            let totalWeight = prizes.reduce((sum, prize) => sum + parseInt(prize.count), 0);
+            if (totalWeight === 0) return;
+
+            isSpinning = true;
+            document.getElementById('spinBtn').disabled = true;
+
+            let randomNum = Math.floor(Math.random() * totalWeight);
+            let cumulativeWeight = 0;
+            let winningIndex = 0;
+
+            for (let i = 0; i < prizes.length; i++) {
+                cumulativeWeight += parseInt(prizes[i].count);
+                if (randomNum < cumulativeWeight) {
+                    winningIndex = i;
+                    break;
+                }
+            }
+
+            const sliceAngle = 360 / prizes.length;
+            const targetAngle = 270 - (winningIndex * sliceAngle + sliceAngle / 2);
+            const spinDegrees = 2160 + targetAngle - (currentRotation % 360);
+            currentRotation += spinDegrees;
+
+            const canvas = document.getElementById('wheel');
+            canvas.style.transform = `rotate(${currentRotation}deg)`;
+
+            let ticks = 0;
+            let tickInterval = setInterval(() => {
+                playTick();
+                ticks++;
+                if (ticks > 15) clearInterval(tickInterval);
+            }, 200);
+
+            setTimeout(() => {
+                prizes[winningIndex].count--;
+                saveData();
+                recordHistory(prizes[winningIndex].name);
+
+                playWinSound();
+                confetti({
+                    particleCount: 150,
+                    spread: 100, 
+                    origin: { y: 0.6, x: 0.4 }, 
+                    colors: ['#FF3B30', '#FFCC00', '#4CD964', '#007AFF']
+                });
+
+                setTimeout(() => {
+                    alert(`🎉 太棒了！恭喜您抽中：\n\n【 ${prizes[winningIndex].name} 】`);
+                    isSpinning = false;
+                    drawWheel();
+                }, 500);
+
+            }, 4000);
+        }
+
+        function saveData() {
+            localStorage.setItem('rainbow_wheel_prizes', JSON.stringify(prizes));
+        }
+
+        function recordHistory(prizeName) {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('zh-TW'); 
+            const timeStr = now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+            
+            history.unshift({ date: dateStr, time: timeStr, name: prizeName });
+            localStorage.setItem('rainbow_wheel_history', JSON.stringify(history));
+        }
+
+        function openAdmin() {
+            if(isSpinning) return;
+            const modal = document.getElementById('adminModal');
+            const listContainer = document.getElementById('admin-prizes-list');
+            
+            listContainer.innerHTML = '';
+            prizes.forEach((prize, index) => {
+                const row = document.createElement('div');
+                row.className = 'prize-edit-row';
+                row.innerHTML = `
+                    <span style="color:${prize.color}; font-weight:bold;">${prize.name}</span>
+                    <div>
+                        剩餘: <input type="number" id="edit-count-${index}" value="${prize.count}" min="0">
+                    </div>
+                `;
+                listContainer.appendChild(row);
+            });
+
+            // 調整為顯示全部歷史紀錄，並依日期加上分隔線
+            const historyList = document.getElementById('history-list');
+            historyList.innerHTML = '';
+            
+            if(history.length === 0) {
+                historyList.innerHTML = '<div class="empty-history">目前尚未有任何抽獎紀錄</div>';
+            } else {
+                let currentDate = '';
+                history.forEach(item => {
+                    // 如果遇到新的日期，就插入一個日期分隔標題
+                    if (item.date !== currentDate) {
+                        const dateHeader = document.createElement('li');
+                        dateHeader.className = 'date-header';
+                        dateHeader.innerText = `--- ${item.date} ---`;
+                        historyList.appendChild(dateHeader);
+                        currentDate = item.date;
+                    }
+                    
+                    const li = document.createElement('li');
+                    li.innerHTML = `<span>🕒 ${item.time}</span> <span><b>${item.name}</b></span>`;
+                    historyList.appendChild(li);
+                });
+            }
+
+            modal.style.display = 'flex';
+        }
+
+        function closeAdmin() {
+            document.getElementById('adminModal').style.display = 'none';
+        }
+
+        function savePrizes() {
+            prizes.forEach((prize, index) => {
+                const inputVal = document.getElementById(`edit-count-${index}`).value;
+                prize.count = parseInt(inputVal) || 0;
+            });
+            saveData();
+            drawWheel();
+            closeAdmin();
+            alert("✅ 數量已更新儲存！");
+        }
+        
+        function resetToDefault() {
+            if(confirm("確定要將所有獎項數量重置為最初的預設值嗎？(這不會清除抽獎紀錄)")) {
+                prizes = JSON.parse(JSON.stringify(defaultPrizes));
+                saveData();
+                drawWheel();
+                openAdmin(); 
+                alert("已重置為預設數量。");
+            }
+        }
+
+        drawWheel();
+
+    </script>
+</body>
+</html>
